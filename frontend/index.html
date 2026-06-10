@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Three-Tier App</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; background-color: #f0f2f5; }
+        .container { max-width: 500px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        input[type="text"] { width: 65%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; font-size: 16px;}
+        button { padding: 10px 15px; background-color: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; margin-left: 5px;}
+        button:hover { background-color: #218838; }
+        ul { list-style-type: none; padding: 0; text-align: left; margin-top: 20px;}
+        li { background: #e9ecef; margin: 8px 0; padding: 12px; border-radius: 5px; border-left: 5px solid #007bff; font-size: 18px;}
+        .error { color: red; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Database Message Board</h2>
+        
+        <div>
+            <input type="text" id="messageInput" placeholder="Type a message...">
+            <button onclick="sendMessage()">Send</button>
+        </div>
+        
+        <p id="status" class="error"></p>
+        
+        <ul id="messageList">
+            <li>Loading messages...</li>
+        </ul>
+    </div>
+
+    <script>
+        const apiUrl = 'http://localhost:5000/api/messages';
+
+        // 1. Function to fetch messages from the database
+        function fetchMessages() {
+            fetch(apiUrl)
+                .then(response => response.json())
+                .then(data => {
+                    const list = document.getElementById('messageList');
+                    list.innerHTML = ''; // Clear current list
+                    
+                    if(data.status === 'success') {
+                        data.data.forEach(msg => {
+                            const li = document.createElement('li');
+                            li.textContent = msg.content;
+                            list.appendChild(li);
+                        });
+                    } else {
+                        list.innerHTML = `<li class="error">Error: ${data.message}</li>`;
+                    }
+                })
+                .catch(error => {
+                    document.getElementById('messageList').innerHTML = '<li class="error">Failed to connect to Python backend.</li>';
+                });
+        }
+
+        // 2. Function to send a new message to the database
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const content = input.value.trim();
+            const status = document.getElementById('status');
+            
+            if (!content) {
+                status.textContent = "Please enter a message first.";
+                return;
+            }
+            
+            status.textContent = "Sending to database...";
+            
+            fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content: content })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if(data.status === 'success') {
+                    input.value = ''; // Clear the input box
+                    status.textContent = ''; // Clear status message
+                    fetchMessages(); // Instantly refresh the message list
+                } else {
+                    status.textContent = "Error: " + data.message;
+                }
+            })
+            .catch(error => {
+                status.textContent = "Failed to send message.";
+            });
+        }
+
+        // 3. Load messages as soon as the page opens
+        fetchMessages();
+    </script>
+</body>
+</html>
